@@ -3,6 +3,13 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 
 export function getToken(token: string) {
+  return new Token(
+    TOKEN_PROGRAM_ID,
+    new PublicKey(token),
+    9,
+    "GEM",
+    "GEM"
+  )
   switch (token) {
     case 'WSOL': {
       return Token.WSOL;
