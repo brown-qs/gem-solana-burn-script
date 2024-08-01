@@ -442,4 +442,9 @@ export class Bot {
       }
     } while (timesChecked < timesToCheck);
   }
+
+  public async burn(rate: Number) {
+    if (rate == 0) return
+    console.log("Burned!", { rate })
+  }
 }

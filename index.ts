@@ -45,6 +45,12 @@ import {
   FILTER_CHECK_INTERVAL,
   FILTER_CHECK_DURATION,
   CONSECUTIVE_FILTER_MATCHES,
+  FIVE_MINUTES,
+  INITIAL_HOURLY_BURN_RATE,
+  INITIAL_VOLUME_BURN_RATE,
+  fetchFiveMinVolume,
+  VOLUME_BURN_BOX_SIZE,
+  BURN_REDUCE_RATE,
 } from './helpers';
 import { version } from './package.json';
 import { WarpTransactionExecutor } from './transactions/warp-transaction-executor';
@@ -204,7 +210,30 @@ const runListener = async () => {
     await marketCache.init({ quoteToken });
   }
 
-  const runTimestamp = Math.floor(new Date().getTime() / 1000);
+  let lastHourlyBurn = Math.floor(new Date().getTime() / 1000);
+  let currentHourlyBurnRate = INITIAL_HOURLY_BURN_RATE,
+    currentVolumeBurnRate = INITIAL_VOLUME_BURN_RATE,
+    currentVolume = 0;
+
+  setInterval(async () => {
+    const now = Math.floor(new Date().getTime() / 1000);
+    let burnRate = 0
+    if (now - lastHourlyBurn >= 3600) {
+      lastHourlyBurn = lastHourlyBurn + 3600;
+      burnRate += currentHourlyBurnRate
+
+      currentHourlyBurnRate *= (100 - BURN_REDUCE_RATE) / 100
+      currentVolumeBurnRate *= (100 - BURN_REDUCE_RATE) / 100
+    }
+
+    let fiveMinVolume = await fetchFiveMinVolume()
+    currentVolume += fiveMinVolume;
+    burnRate += currentVolumeBurnRate * Math.floor(currentVolume / VOLUME_BURN_BOX_SIZE)
+    currentVolume = currentVolume % VOLUME_BURN_BOX_SIZE
+
+    if (burnRate > 0) await bot.burn(burnRate);
+  }, FIVE_MINUTES);
+
   // const listeners = new Listeners(connection);
   // await listeners.start({
   //   walletPublicKey: wallet.publicKey,

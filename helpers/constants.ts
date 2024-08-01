@@ -63,3 +63,14 @@ export const MIN_POOL_SIZE = retrieveEnvVariable('MIN_POOL_SIZE', logger);
 export const MAX_POOL_SIZE = retrieveEnvVariable('MAX_POOL_SIZE', logger);
 export const USE_SNIPE_LIST = retrieveEnvVariable('USE_SNIPE_LIST', logger) === 'true';
 export const SNIPE_LIST_REFRESH_INTERVAL = Number(retrieveEnvVariable('SNIPE_LIST_REFRESH_INTERVAL', logger));
+
+export const FIVE_MINUTES = 1000 * 60 * 5;
+export const INITIAL_HOURLY_BURN_RATE = 0.4
+export const INITIAL_VOLUME_BURN_RATE = 0.04
+export const BURN_REDUCE_RATE = 0.5
+export const VOLUME_BURN_BOX_SIZE = 100000
+export const BURN_WALLETS_COUNT = 90
+export const TARGET_BURN_PERCENT = 90
+export const TOTAL_SUPPLY = 1000000000
+
+export const DEXSCREENER_TOKEN_API = `https://api.dexscreener.com/latest/dex/tokens/${QUOTE_MINT}`
