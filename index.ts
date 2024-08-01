@@ -205,39 +205,39 @@ const runListener = async () => {
   }
 
   const runTimestamp = Math.floor(new Date().getTime() / 1000);
-  const listeners = new Listeners(connection);
-  await listeners.start({
-    walletPublicKey: wallet.publicKey,
-    quoteToken,
-    autoSell: AUTO_SELL,
-    cacheNewMarkets: CACHE_NEW_MARKETS,
-  });
+  // const listeners = new Listeners(connection);
+  // await listeners.start({
+  //   walletPublicKey: wallet.publicKey,
+  //   quoteToken,
+  //   autoSell: AUTO_SELL,
+  //   cacheNewMarkets: CACHE_NEW_MARKETS,
+  // });
 
-  listeners.on('market', (updatedAccountInfo: KeyedAccountInfo) => {
-    const marketState = MARKET_STATE_LAYOUT_V3.decode(updatedAccountInfo.accountInfo.data);
-    marketCache.save(updatedAccountInfo.accountId.toString(), marketState);
-  });
+  // listeners.on('market', (updatedAccountInfo: KeyedAccountInfo) => {
+  //   const marketState = MARKET_STATE_LAYOUT_V3.decode(updatedAccountInfo.accountInfo.data);
+  //   marketCache.save(updatedAccountInfo.accountId.toString(), marketState);
+  // });
 
-  listeners.on('pool', async (updatedAccountInfo: KeyedAccountInfo) => {
-    const poolState = LIQUIDITY_STATE_LAYOUT_V4.decode(updatedAccountInfo.accountInfo.data);
-    const poolOpenTime = parseInt(poolState.poolOpenTime.toString());
-    const exists = await poolCache.get(poolState.baseMint.toString());
+  // listeners.on('pool', async (updatedAccountInfo: KeyedAccountInfo) => {
+  //   const poolState = LIQUIDITY_STATE_LAYOUT_V4.decode(updatedAccountInfo.accountInfo.data);
+  //   const poolOpenTime = parseInt(poolState.poolOpenTime.toString());
+  //   const exists = await poolCache.get(poolState.baseMint.toString());
 
-    if (!exists && poolOpenTime > runTimestamp) {
-      poolCache.save(updatedAccountInfo.accountId.toString(), poolState);
-      await bot.buy(updatedAccountInfo.accountId, poolState);
-    }
-  });
+  //   if (!exists && poolOpenTime > runTimestamp) {
+  //     poolCache.save(updatedAccountInfo.accountId.toString(), poolState);
+  //     await bot.buy(updatedAccountInfo.accountId, poolState);
+  //   }
+  // });
 
-  listeners.on('wallet', async (updatedAccountInfo: KeyedAccountInfo) => {
-    const accountData = AccountLayout.decode(updatedAccountInfo.accountInfo.data);
+  // listeners.on('wallet', async (updatedAccountInfo: KeyedAccountInfo) => {
+  //   const accountData = AccountLayout.decode(updatedAccountInfo.accountInfo.data);
 
-    if (accountData.mint.equals(quoteToken.mint)) {
-      return;
-    }
+  //   if (accountData.mint.equals(quoteToken.mint)) {
+  //     return;
+  //   }
 
-    await bot.sell(updatedAccountInfo.accountId, accountData);
-  });
+  //   await bot.sell(updatedAccountInfo.accountId, accountData);
+  // });
 
   printDetails(wallet, quoteToken, bot);
 };
