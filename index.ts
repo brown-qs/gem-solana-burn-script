@@ -51,10 +51,12 @@ import {
   fetchFiveMinVolume,
   VOLUME_BURN_BOX_SIZE,
   BURN_REDUCE_RATE,
+  TOTAL_SUPPLY,
 } from './helpers';
 import { version } from './package.json';
 import { WarpTransactionExecutor } from './transactions/warp-transaction-executor';
 import { JitoTransactionExecutor } from './transactions/jito-rpc-transaction-executor';
+import { BurnWalletListCache } from './cache/burn-wallet-list.cache';
 
 const connection = new Connection(RPC_ENDPOINT, {
   wsEndpoint: RPC_WEBSOCKET_ENDPOINT,
@@ -149,6 +151,9 @@ const runListener = async () => {
 
   const marketCache = new MarketCache(connection);
   const poolCache = new PoolCache();
+  const burnWalletListCache = new BurnWalletListCache();
+  burnWalletListCache.init();
+
   let txExecutor: TransactionExecutor;
 
   switch (TRANSACTION_EXECUTOR) {
@@ -199,12 +204,12 @@ const runListener = async () => {
   };
 
   const bot = new Bot(connection, marketCache, poolCache, txExecutor, botConfig);
-  const valid = await bot.validate();
+  // const valid = await bot.validate();
 
-  if (!valid) {
-    logger.info('Bot is exiting...');
-    process.exit(1);
-  }
+  // if (!valid) {
+  //   logger.info('Bot is exiting...');
+  //   process.exit(1);
+  // }
 
   if (PRE_LOAD_EXISTING_MARKETS) {
     await marketCache.init({ quoteToken });
@@ -231,7 +236,16 @@ const runListener = async () => {
     burnRate += currentVolumeBurnRate * Math.floor(currentVolume / VOLUME_BURN_BOX_SIZE)
     currentVolume = currentVolume % VOLUME_BURN_BOX_SIZE
 
-    if (burnRate > 0) await bot.burn(burnRate);
+    if (burnRate > 0) {
+      const wallet = burnWalletListCache.currentBurnWallet()
+      if (!wallet) return
+      const remainder = await bot.burn(burnRate * TOTAL_SUPPLY, wallet);
+      if (remainder > 0) {
+        const nextWallet = burnWalletListCache.goNextWallet()
+        if (!nextWallet) return;
+        await bot.burn(burnRate * TOTAL_SUPPLY, nextWallet);
+      }
+    }
   }, FIVE_MINUTES);
 
   // const listeners = new Listeners(connection);

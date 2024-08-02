@@ -8,6 +8,7 @@ import {
 } from '@solana/web3.js';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
+  createBurnCheckedInstruction,
   createCloseAccountInstruction,
   getAccount,
   getAssociatedTokenAddress,
@@ -96,7 +97,7 @@ export class Bot {
       logger.error(
         `${this.config.quoteToken.symbol} token account not found in wallet: ${this.config.wallet.publicKey.toString()}`,
       );
-      // return false;
+      return false;
     }
 
     return true;
@@ -443,8 +444,52 @@ export class Bot {
     } while (timesChecked < timesToCheck);
   }
 
-  public async burn(rate: Number) {
-    if (rate == 0) return
-    console.log("Burned!", { rate })
+  public async burn(burnQuantity: number, wallet: Keypair): Promise<number> {
+    try {
+
+      // Step 1 - Fetch Associated Token Account Address
+      console.log(`Step 1 - Fetch Token Account`);
+      const account = await getAssociatedTokenAddress(this.config.quoteToken.mint, wallet.publicKey);
+      console.log(`    ✅ - Associated Token Account Address: ${account.toString()}`);
+
+      // Get Balance
+      const balance = (await this.connection.getTokenAccountBalance(account, this.connection.commitment)).value.amount
+      const actualBurn = Math.min(Number(balance), burnQuantity)
+      if (actualBurn == 0) return 0
+
+      // Step 2 - Create Burn Instructions
+      console.log(`Step 2 - Create Burn Instructions`);
+      const burnIx = createBurnCheckedInstruction(
+        account, // PublicKey of Owner's Associated Token Account
+        this.config.quoteToken.mint, // Public Key of the Token Mint Address
+        wallet.publicKey, // Public Key of Owner's Wallet
+        actualBurn * (10 ** this.config.quoteToken.decimals), // Number of tokens to burn
+        this.config.quoteToken.decimals // Number of Decimals of the Token Mint
+      );
+      console.log(`    ✅ - Burn Instruction Created`);
+
+      // Step 3 - Fetch Blockhash
+      console.log(`Step 3 - Fetch Blockhash`);
+      const latestBlockhash = await this.connection.getLatestBlockhash('finalized');
+      console.log(`    ✅ - Latest Blockhash: ${latestBlockhash.blockhash}`);
+
+
+      // Step 4 - Assemble Transaction
+      console.log(`Step 4 - Assemble Transaction`);
+      const messageV0 = new TransactionMessage({
+        payerKey: wallet.publicKey,
+        recentBlockhash: latestBlockhash.blockhash,
+        instructions: [burnIx]
+      }).compileToV0Message();
+      const transaction = new VersionedTransaction(messageV0);
+      transaction.sign([wallet]);
+      console.log(`    ✅ - Transaction Created and Signed`);
+
+      const result = await this.txExecutor.executeAndConfirm(transaction, wallet, latestBlockhash);
+      if (!result.confirmed) return 0
+      return burnQuantity - actualBurn
+    } catch (e) {
+      return 0
+    }
   }
 }

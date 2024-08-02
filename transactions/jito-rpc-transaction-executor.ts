@@ -83,7 +83,6 @@ export class JitoTransactionExecutor implements TransactionExecutor {
         'https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles',
         'https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles',
       ];
-
       const requests = endpoints.map((url) =>
         axios.post(url, {
           jsonrpc: '2.0',
